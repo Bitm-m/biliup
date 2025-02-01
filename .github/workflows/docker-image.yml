@@ -16,7 +16,7 @@ jobs:
         with:
           registry: ghcr.io
           username: bitm-m
-          password: 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
+          password: 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
 
       - name: Verify login by showing Docker info
         run: docker info
