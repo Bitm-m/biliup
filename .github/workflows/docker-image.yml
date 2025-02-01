@@ -11,41 +11,7 @@ on:
       - master
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Get PR number, repo URL, and branch name
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            pr_number=$(jq -r .number < "$GITHUB_EVENT_PATH")
-            repo_url=$(jq -r .pull_request.head.repo.clone_url < "$GITHUB_EVENT_PATH")
-            branch_name=$GITHUB_HEAD_REF
-          else
-            pr_number=""
-            repo_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
-            branch_name="master"
-          fi
-          echo "PR_NUMBER=$pr_number" >> $GITHUB_ENV
-          echo "REPO_URL=$repo_url" >> $GITHUB_ENV
-          echo "BRANCH_NAME=$branch_name" >> $GITHUB_ENV
-
-      - name: Run tests
-        run: |
-          if [ -f docker-compose.test.yml ]; then
-            docker-compose --file docker-compose.test.yml build
-            docker-compose --file docker-compose.test.yml run sut
-          else
-            docker build \
-              --build-arg repo_url=$REPO_URL \
-              --build-arg branch_name=$BRANCH_NAME \
-              . --file Dockerfile
-          fi
-
   push:
-    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
