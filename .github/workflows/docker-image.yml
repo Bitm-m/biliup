@@ -3,12 +3,12 @@ name: Docker Image CI
 on:
   push:
     branches:
-      - master   # 推送到 master 分支触发
+      - master
     tags:
-      - v*       # 推送到 v1.2.3 等标签时触发
+      - v*
   pull_request:
     branches:
-      - master   # 针对 PR 的操作
+      - master
 
 jobs:
   test:
@@ -17,39 +17,67 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # 只验证登录和推送
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}  # 使用 GitHub 用户名
-          password: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token
-
-      # 推送镜像到 GitHub Container Registry
-      - name: Test Push to GitHub Container Registry
+      - name: Get PR number, repo URL, and branch name
         run: |
-          echo "FROM alpine" > Dockerfile  # 创建简单的 Dockerfile
-          docker build -t ghcr.io/${{ github.repository }}/test:latest .  # 构建镜像
-          docker push ghcr.io/${{ github.repository }}/test:latest  # 推送镜像
-          
-  # 仅验证推送，不进行构建
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            pr_number=$(jq -r .number < "$GITHUB_EVENT_PATH")
+            repo_url=$(jq -r .pull_request.head.repo.clone_url < "$GITHUB_EVENT_PATH")
+            branch_name=$GITHUB_HEAD_REF
+          else
+            pr_number=""
+            repo_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+            branch_name="master"
+          fi
+          echo "PR_NUMBER=$pr_number" >> $GITHUB_ENV
+          echo "REPO_URL=$repo_url" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$branch_name" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: |
+          if [ -f docker-compose.test.yml ]; then
+            docker-compose --file docker-compose.test.yml build
+            docker-compose --file docker-compose.test.yml run sut
+          else
+            docker build \
+              --build-arg repo_url=$REPO_URL \
+              --build-arg branch_name=$BRANCH_NAME \
+              . --file Dockerfile
+          fi
+
   push:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}  # 使用 GitHub 用户名
-          password: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}  # 使用 GitHub 生成的 Personal Access Token
 
-      - name: Push a simple Docker image
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}/simple-image:latest .  # 构建镜像
-          docker push ghcr.io/${{ github.repository }}/simple-image:latest  # 推送镜像
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/bitm-m/biliup/test
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/bitm-m/biliup/test:latest
+          labels: ${{ steps.meta.outputs.labels }}
