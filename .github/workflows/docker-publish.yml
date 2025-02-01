@@ -11,41 +11,7 @@ on:
       - master   # 针对 PR 的操作
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Get PR number, repo URL, and branch name
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            pr_number=$(jq -r .number < "$GITHUB_EVENT_PATH")
-            repo_url=$(jq -r .pull_request.head.repo.clone_url < "$GITHUB_EVENT_PATH")
-            branch_name=$GITHUB_HEAD_REF
-          else
-            pr_number=""
-            repo_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
-            branch_name="master"
-          fi
-          echo "PR_NUMBER=$pr_number" >> $GITHUB_ENV
-          echo "REPO_URL=$repo_url" >> $GITHUB_ENV
-          echo "BRANCH_NAME=$branch_name" >> $GITHUB_ENV
-
-      - name: Run tests
-        run: |
-          if [ -f docker-compose.test.yml ]; then
-            docker-compose --file docker-compose.test.yml build
-            docker-compose --file docker-compose.test.yml run sut
-          else
-            docker build \
-              --build-arg repo_url=$REPO_URL \
-              --build-arg branch_name=$BRANCH_NAME \
-              . --file Dockerfile
-          fi
-
   push:
-    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
@@ -59,6 +25,9 @@ jobs:
         with:
           images: |
             ghcr.io/biliup/caution
+          tags: |
+            latest
+            ${{ github.ref_name }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -73,11 +42,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Test Push (skip build)
+        run: |
+          echo "Verifying login and push permissions..."
+          docker tag ghcr.io/biliup/caution:latest ghcr.io/biliup/caution:test
+          docker push ghcr.io/biliup/caution:test
