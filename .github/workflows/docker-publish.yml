@@ -1,3 +1,21 @@
-- name: Log in to GitHub Container Registry
-  run: |
-    echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+name: Verify GHCR Login
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-login:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Verify login by showing Docker info
+        run: docker info
