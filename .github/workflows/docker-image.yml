@@ -20,3 +20,4 @@ jobs:
 
       - name: Verify login by showing Docker info
         run: docker info
+        
