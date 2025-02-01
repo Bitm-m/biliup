@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # 跳过构建步骤，直接验证推送
+      # 只验证登录和推送
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -25,14 +25,15 @@ jobs:
           username: ${{ github.actor }}  # 使用 GitHub 用户名
           password: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token
 
-      # 验证推送是否成功
+      # 推送镜像到 GitHub Container Registry
       - name: Test Push to GitHub Container Registry
         run: |
-          echo "FROM alpine" > Dockerfile  # 简单的 Dockerfile
-          docker build -t ghcr.io/${{ github.repository }}/test:latest .  # 构建镜像
-          docker push ghcr.io/${{ github.repository }}/test:latest  # 推送镜像
+          echo "FROM alpine" > Dockerfile  # 创建简单的 Dockerfile
+          IMAGE_NAME="ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/test:latest"  # 转换为小写
+          docker build -t $IMAGE_NAME .  # 构建镜像
+          docker push $IMAGE_NAME  # 推送镜像
           
-  # 跳过构建步骤，仅验证推送
+  # 仅验证推送，不进行构建
   push:
     needs: test
     runs-on: ubuntu-latest
@@ -51,5 +52,6 @@ jobs:
 
       - name: Push a simple Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/simple-image:latest .  # 使用简单的镜像标签
-          docker push ghcr.io/${{ github.repository }}/simple-image:latest  # 推送镜像
+          IMAGE_NAME="ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/simple-image:latest"  # 转换为小写
+          docker build -t $IMAGE_NAME .  # 构建镜像
+          docker push $IMAGE_NAME  # 推送镜像
