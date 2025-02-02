@@ -58,7 +58,7 @@ jobs:
           author_email: 'github-actions@github.com'
 
       - name: Upload Docker image tar file as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: ifcat-v${{ env.NEW_VERSION }}.tar
