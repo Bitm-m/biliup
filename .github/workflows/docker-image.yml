@@ -13,6 +13,15 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v4
 
+      - name: Check if .version file exists, create if not
+        run: |
+          if [ ! -f .version ]; then
+            echo "1.0.0" > .version  # 如果文件不存在，创建一个默认版本
+            echo "Creating .version with default value 1.0.0"
+          else
+            echo ".version file exists"
+          fi
+
       - name: Read current version
         id: get_version
         run: |
