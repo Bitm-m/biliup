@@ -20,6 +20,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Check if .version file exists, create if not
+        run: |
+          if [ ! -f .version ]; then
+            echo "1.0.0" > .version  # Create a default version if the file doesn't exist
+            echo "Creating .version with default value 1.0.0"
+          else
+            echo ".version file exists"
+          fi
+
       - name: Read current version
         id: get_version
         run: |
