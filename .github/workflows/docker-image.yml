@@ -1,4 +1,4 @@
-name: Save Docker Image as Artifact
+name: Upload Docker Image as Artifact
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  save_image:
+  upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,7 +16,7 @@ jobs:
       - name: Check if .version file exists, create if not
         run: |
           if [ ! -f .version ]; then
-            echo "1.0.0" > .version  # 如果文件不存在，创建一个默认版本
+            echo "1.0.0" > .version  # Create a default version if the file doesn't exist
             echo "Creating .version with default value 1.0.0"
           else
             echo ".version file exists"
@@ -40,9 +40,14 @@ jobs:
           echo "::set-output name=new_version::$NEW_VERSION"
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
 
-      - name: Save Docker image as artifact
+      - name: Skip Docker build and use an existing image
         run: |
-          docker buildx build --platform linux/arm64 -t moonhou/ifcat:${{ env.NEW_VERSION }} . --load
+          echo "Skipping build step and using the pre-built image."
+
+      - name: Save Docker image to tar file (test upload only)
+        run: |
+          # Use a pre-built image for testing (for example, you can use the moonhou/ifcat image if available)
+          docker pull moonhou/ifcat:${{ env.NEW_VERSION }} || echo "Image not found, skipping download."
           docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
 
       - name: Upload Docker image tar file as artifact
