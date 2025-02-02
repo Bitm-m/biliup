@@ -1,4 +1,4 @@
-name: Upload Docker Image as Artifact
+name: Upload Docker Image as Artifact (Test)
 
 on:
   push:
@@ -13,45 +13,13 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v4
 
-      - name: Check if .version file exists, create if not
+      - name: Create a dummy Docker image tar file for testing
         run: |
-          if [ ! -f .version ]; then
-            echo "1.0.0" > .version  # Create a default version if the file doesn't exist
-            echo "Creating .version with default value 1.0.0"
-          else
-            echo ".version file exists"
-          fi
+          echo "This is a dummy Docker image tar file" > ifcat-v1.0.0.tar
+          echo "Dummy tar file created for upload test."
 
-      - name: Read current version
-        id: get_version
-        run: |
-          VERSION=$(cat .version)
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "::set-output name=old_version::$VERSION"
-
-      - name: Increment version
-        id: increment_version
-        run: |
-          VERSION=$(cat .version)
-          IFS='.' read -r major minor patch <<< "$VERSION"
-          patch=$((patch + 1))
-          NEW_VERSION="$major.$minor.$patch"
-          echo "$NEW_VERSION" > .version
-          echo "::set-output name=new_version::$NEW_VERSION"
-          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-
-      - name: Skip Docker build and use an existing image
-        run: |
-          echo "Skipping build step and using the pre-built image."
-
-      - name: Save Docker image to tar file (test upload only)
-        run: |
-          # Use a pre-built image for testing (for example, you can use the moonhou/ifcat image if available)
-          docker pull moonhou/ifcat:${{ env.NEW_VERSION }} || echo "Image not found, skipping download."
-          docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
-
-      - name: Upload Docker image tar file as artifact
+      - name: Upload dummy Docker image tar file as artifact
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
-          path: ifcat-v${{ env.NEW_VERSION }}.tar
+          path: ifcat-v1.0.0.tar
